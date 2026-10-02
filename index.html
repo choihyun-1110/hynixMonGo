@@ -90,9 +90,10 @@ function bag(){$('view').innerHTML=`<h2>트레이너의 가방</h2><div class="c
 const CHAT_API = 'https://hynixmon-gpt.chlgusla1.chatgpt.site/chat'; // Set to deployed server /chat URL; never put an API key here.
 let chatBusy=false;
 state.messages=Array.isArray(state.messages)?state.messages:[];
-function conversation(){return state.messages.map(m=>`<div class="chat ${m.role==='user'?'user':''}"><div class="small" style="margin-bottom:5px">${m.role==='user'?'나':m.provider==='OpenAI'?'✨ GPT 복지 트레이너':'✨ 복지 트레이너'} · ${esc(m.time||'')}</div><p style="white-space:pre-wrap">${esc(m.text)}</p>${(m.actions||[]).map(a=>a.type==='application'?`<button class="wide" onclick="prepareApplication('${a.id==='wed'?'결혼해요':'아이가 입학해요'}')">${a.id==='wed'?'결혼':'자녀 학자금'} 신청서 준비 →</button>`:a.type==='map'?`<button class="wide" onclick="navigate('map')">지도에서 혜택 확인 →</button>`:`<button class="wide" onclick="detail('${a.id}')">${by(a.id).emoji} ${by(a.id).title} 상세 보기</button>`).join('')}</div>`).join('')}
+state.messages.forEach(m=>{if(m.role==='assistant'&&m.text==='서버의 OpenAI API 키를 확인해야 합니다.')m.provider='error'});
+function conversation(){return state.messages.map(m=>`<div class="chat ${m.role==='user'?'user':''}"><div class="small" style="margin-bottom:5px">${m.role==='user'?'나':m.provider==='OpenAI'?'✨ GPT 복지 트레이너':m.provider==='error'?'⚠ 연결 오류':'✨ 데모 복지 트레이너'} · ${esc(m.time||'')}</div><p style="white-space:pre-wrap">${esc(m.text)}</p>${(m.actions||[]).map(a=>a.type==='application'?`<button class="wide" onclick="prepareApplication('${a.id==='wed'?'결혼해요':'아이가 입학해요'}')">${a.id==='wed'?'결혼':'자녀 학자금'} 신청서 준비 →</button>`:a.type==='map'?`<button class="wide" onclick="navigate('map')">지도에서 혜택 확인 →</button>`:`<button class="wide" onclick="detail('${a.id}')">${by(a.id).emoji} ${by(a.id).title} 상세 보기</button>`).join('')}</div>`).join('')}
 function chat(){
-$('view').innerHTML=`<div class="row"><h2>AI 복지 트레이너</h2><span class="pill">${CHAT_API?'GPT LIVE':'DEMO'}</span></div><div class="chat">안녕하세요, ${esc(state.profile.name)} 트레이너님! 어떤 복지가 궁금하세요?<br><span class="small">${CHAT_API?'GPT 답변 · 복지는 예시 규정 기준<br>질문·최근 대화·최소 자격 조건을 서버와 OpenAI에 전달합니다. 이름·사번·증빙은 전달하지 않습니다.':'규칙 기반 데모 응답 · 실제 LLM 연결 없음'}<br>대화는 이 브라우저에 저장됩니다. 데모 정보로 대화하세요.</span></div><div class="chips">${['집사고 싶어','저 다음 달에 결혼해요','이사해요','아이가 입학해요','여기서 뭐 쓸 수 있어?'].map(t=>`<button ${chatBusy?'disabled':''} onclick="ask('${t}')">${t}</button>`).join('')}</div><div id="messages" role="log" aria-label="트레이너 대화" aria-live="polite">${conversation()}${chatBusy?'<div class="chat" id="typing"><span class="spin">◌</span> 트레이너가 관련 복지를 확인하고 있어요…</div>':''}</div><form id="chatForm"><label>트레이너에게 질문<input id="question" placeholder="예: 집사고 싶어" required maxlength="300" ${chatBusy?'disabled':''}></label><button class="primary wide" ${chatBusy?'disabled':''}>${chatBusy?'답변 확인 중…':'보내기 ✨'}</button></form>`;
+$('view').innerHTML=`<div class="row"><h2>AI 복지 트레이너</h2><span class="pill">${CHAT_API?'GPT 연결':'DEMO'}</span></div><div class="chat">안녕하세요, ${esc(state.profile.name)} 트레이너님! 어떤 복지가 궁금하세요?<br><span class="small">${CHAT_API?'GPT 답변 · 복지는 예시 규정 기준<br>질문·최근 대화·최소 자격 조건을 서버와 OpenAI에 전달합니다. 이름·사번·증빙은 전달하지 않습니다.':'규칙 기반 데모 응답 · 실제 LLM 연결 없음'}<br>대화는 이 브라우저에 저장됩니다. 데모 정보로 대화하세요.</span></div><div class="chips">${['집사고 싶어','저 다음 달에 결혼해요','이사해요','아이가 입학해요','여기서 뭐 쓸 수 있어?'].map(t=>`<button ${chatBusy?'disabled':''} onclick="ask('${t}')">${t}</button>`).join('')}</div><div id="messages" role="log" aria-label="트레이너 대화" aria-live="polite">${conversation()}${chatBusy?'<div class="chat" id="typing"><span class="spin">◌</span> 트레이너가 관련 복지를 확인하고 있어요…</div>':''}</div><form id="chatForm"><label>트레이너에게 질문<input id="question" placeholder="예: 집사고 싶어" required maxlength="300" ${chatBusy?'disabled':''}></label><button class="primary wide" ${chatBusy?'disabled':''}>${chatBusy?'답변 확인 중…':'보내기 ✨'}</button></form>`;
 $('chatForm').onsubmit=e=>{e.preventDefault();ask($('question').value)};
 }
 function demoAnswer(text){
@@ -109,7 +110,7 @@ return {text:`“${text}”에 직접 해당하는 항목은 현재 예시 규�
 }
 async function gptAnswer(){
 const p=state.profile;
-const messages=state.messages.slice(-12).map(m=>({role:m.role,content:m.text.slice(0,1000)}));
+const messages=state.messages.filter(m=>m.provider!=='error').slice(-12).map(m=>({role:m.role,content:m.text.slice(0,1000)}));
 const tenureMonths=Math.max(0,Math.floor((Date.now()-new Date(p.join).getTime())/(86400000*30.4375)));
 const response=await fetch(CHAT_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages,profile:{site:p.site,children:p.children,vip:p.vip,dorm:p.dorm,tenureMonths}}),signal:AbortSignal.timeout(30000)});
 const data=await response.json();
@@ -125,7 +126,7 @@ text=String(text).trim();if(!text||chatBusy)return;
 let time=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'}).format(new Date());
 state.messages.push({role:'user',text,time});state.messages=state.messages.slice(-100);save();chatBusy=true;tab='chat';render();$('typing')?.scrollIntoView({block:'nearest',behavior:'smooth'});
 await pause(700);
-let answer;try{answer=CHAT_API?await gptAnswer():demoAnswer(text)}catch(error){answer={text:CHAT_API?(error.message||'GPT 연결에 실패했어요. 잠시 후 다시 보내 주세요.'):'복지 정보를 확인하는 데 문제가 생겼어요. 프로필과 선택한 매장을 확인한 후 다시 질문해 주세요.',actions:[]}}
+let answer;try{answer=CHAT_API?await gptAnswer():demoAnswer(text)}catch(error){answer={provider:'error',text:CHAT_API?(error.message||'GPT 연결에 실패했어요. 잠시 후 다시 보내 주세요.'):'복지 정보를 확인하는 데 문제가 생겼어요. 프로필과 선택한 매장을 확인한 후 다시 질문해 주세요.',actions:[]}}
 state.messages.push({role:'assistant',time,text:answer.text,actions:answer.actions,provider:answer.provider});state.messages=state.messages.slice(-100);save();chatBusy=false;
 if(tab==='chat'){chat();$('chatForm').scrollIntoView({block:'end',behavior:'smooth'});$('question').focus({preventScroll:true})}
 }
